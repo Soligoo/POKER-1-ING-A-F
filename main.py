@@ -40,6 +40,7 @@ class Persona:
         self.combinazione = "None"
         self.valori = {}
         self.semi = {}
+        self.scalabile = []
 
 
     def pesca_persona(self,mazzo): #pesca una carta che poi viene aggiunta alla mano del giocatore o al bot
@@ -107,6 +108,7 @@ class Persona:
         # perché dopo il terzo non ci sarebbe mai una scala vista la presenza di 4 o 3 o 2 o 1 valore.
         for i in range(len(valori)-4):
             if all(valori[j+1] - valori[j] == 1 for j in range(i,i+4)): #vede se tutte le sottrazioni di uno valore dal seguente è = 1 che implica che il secondo è il successivo al primo
+                self.scalabile = valori[i:i+4]
                 return True
         if set([14,2,3,4,5]).issubset(set(self.valori.keys())): #questo serve nel caso ci sia una scala bassa d'asso, .subset() vede se il primo insieme è un sottoinsieme del secondo, molto utile!
             return True
@@ -116,18 +118,34 @@ class Persona:
 
 
     def scala_reale(self):
-        if set([10, 11, 12, 13, 14]).issubset(set(self.valori.keys())):
+        stelvio = []
+        for carta in self.mano:
+            if carta.valore in self.scalabile:
+                stelvio.append(carta.seme)
+
+        if set([14,13,12,11,10]).issubset(set(self.valori.keys())) and len(set(stelvio)) == 1:
             return True
 
+        return False
+
+    def colorazione(self):
+        stelvio = []
+        for carta in self.mano:
+            if carta.valore in self.scalabile:
+                stelvio.append(carta.seme)
+        if len(set(stelvio)) == 1:
+            return True
         return False
 
     #funzione che restituisce la combinazione nella mano in ordine di "forza"
     def get_combo(self):
         scala = self.scala()
 
-
-
-        if 4 in self.valori.values(): #4 carte di valore uguale, se nei valori del dizionario è presente un 4 implica la presenza di un poker
+        if scala and self.scala_reale():
+            combinazione = "SCALA REALE"
+        elif scala and self.colorazione():
+            combinazione = "SCALA COLORE"
+        elif 4 in self.valori.values(): #4 carte di valore uguale, se nei valori del dizionario è presente un 4 implica la presenza di un poker
             combinazione = "POKER"
         elif 3 in self.valori.values() and 2 in self.valori.values(): #nel caso ci sia un tris ed una coppia la mano si unisce e si chiama full
             combinazione = "FULL"
@@ -197,11 +215,10 @@ tester("TRIS")
 tester("SCALA")
 tester("COLORE")
 tester("POKER")
-#tester("SCALA COLORE")
-#tester("SCALA REALE")
+tester("SCALA COLORE")
+tester("SCALA REALE")
 s = time.time()
 print(s-f)
-
 
 
 
