@@ -41,6 +41,9 @@ class Persona:
         self.valori = {}
         self.semi = {}
         self.scalabile = []
+        self.conto = 1000
+        self.puntata = 0
+
 
 
     def pesca_persona(self,mazzo): #pesca una carta che poi viene aggiunta alla mano del giocatore o al bot
@@ -164,22 +167,145 @@ class Persona:
 
         return combinazione
 
+    #questa funzione vede quanto bisogna mettere nel piatto e a quanto ammonta la nostra puntata, quindi per esempio se abbiamo puntato meno del rialzo non va bene
+    def punta(self,n):
+        self.puntata = n
+        self.conto -= n
 
-
+    #funzione per resettare mano combinazione, puntata, ecc.
     def reset(self):
         self.mano = []
         self.combinazione = "None"
+        self.puntata = 0
 
 
     def __str__(self):
         return ",".join(str(carta) for carta in self.mano)
+class Giocatore(Persona):
+    pass
+
+#da vedere dopo
+#class Bot(Persona):
+#    def init(self):
+#        self.valutazione = 0
+#
+#    def evaluate(self):
+#        d = {
+#            "CARTA ALTA":1,
+#            "COPPIA":2,
+#            "DOPPIA COPPIA":3,
+#            "TRIS":4,
+#            "COLORE":5,
+#            "SCALA":6,
+#            "FULL": 7,
+#            "POKER":8,
+#            "SCALA COLORE":9,
+#            "SCALA REALE":10
+#        }
+#
+#        self.valutazione = d[self.combinazione]
+
+class Poker:
+    def __init__(self,num_giocatori =1):
+        self.piatto = 0
+        self.mazzo = Mazzo()
+        self.mazzo.mischia()
+        self.puntata_ora = 50
+        self.giocatori = [Giocatore(f"{i+1}") for i in range(num_giocatori)]
+        self.l_puntate = []
+        self.carte_sul_tavolo = []
+
+    def update_l_puntate(self):
+        self.l_puntate = [giocatore.puntata for giocatore in self.giocatori]
+
+    def puntate(self,giocatore):
+
+        while True:
+            try:
+                print(f"è il momento di puntare per {giocatore.nome}")
+                x = int(input("inserisci quanto vuoi puntare "))
+                if x < self.puntata_ora or x > giocatore.conto or x<1:
+                    print(f"la puntata di {x} non è valida")
+                else:
+                    giocatore.punta(x)
+                    self.piatto += x
+                    if x > self.puntata_ora: self.puntata_ora = x
+                    break
+            except ValueError:
+                print("Input non valido inserisci un numero intero")
+
+    def puntata_rialzo(self,giocatore):
+        while True:
+            try:
+                print(f"è il momento di puntare per {giocatore.nome}")
+                x = int(input("inserisci quanto vuoi puntare "))
+                if x<(max(self.l_puntate)-giocatore.puntata) or x>giocatore.conto:
+                    print(f"la puntata di {x} non è valida")
+                else:
+                    giocatore.punta(x)
+                    self.piatto += x
+                    if x > self.puntata_ora: self.puntata_ora = x
+                    break
+            except ValueError:
+                print("Input non valido inserisci un numero intero")
+
+
+    def prima_pesca(self):
+        for giocatore in self.giocatori:
+            giocatore.pesca_persona(self.mazzo)
+            giocatore.pesca_persona(self.mazzo)
+
+    def flop(self):
+
+        for i in range(3):
+            x = self.mazzo.pesca()
+            self.carte_sul_tavolo.append(x)
+            for giocatore in self.giocatori:
+                giocatore.mano.append(x)
+        print("le prime carte sul tavolo sono:")
+        for carta in self.carte_sul_tavolo:
+            print(f"{carta.seme} {carta.valore}",end=", ")
+
+    def ps_tavolo(self):
+        x = self.mazzo.pesca()
+        for giocatore in self.giocatori:
+            giocatore.mano.append(x)
+
+
+
+
+def gioco():
+    pok = Poker(2)
+    for giocatore in pok.giocatori:
+
+        pok.puntate(giocatore)
+    pok.update_l_puntate()
+    print(pok.l_puntate)
+    print(set(pok.l_puntate))
+    while len(set(pok.l_puntate)) != 1:
+        time.sleep(1)
+        print(f"attenzione qualcuno ha rialzato, si rifanno le puntate")
+        for giocatore in pok.giocatori:
+            if giocatore.puntata != max(pok.l_puntate):
+                pok.puntata_rialzo(giocatore)
+        pok.update_l_puntate()
+
+
+
+
+
+
+
+
+
+
 
 #funzione test creata da chatgpt per vedere se le varie funzioni combo funzionano
 def tester(combo):
     g = Persona("Jolly")
     max_attempts = 10  # Per evitare loop infiniti
     attempts = 0
-
+    n = 0
     while g.combinazione != combo:
         attempts += 1
 
@@ -198,6 +324,7 @@ def tester(combo):
         # Calcola i valori e le combinazioni (aggiunta mia per avere più informazioni)
         g.get_stat()
         g.combinazione = g.get_combo()
+
         if attempts%50000 == 0:
             print(f"siamo al {attempts} tentativo, mano al momento: {g}")
 
@@ -206,21 +333,22 @@ def tester(combo):
 
 
 
-
-f = time.time()
-tester("CARTA ALTA")
-tester("COPPIA")
-tester("DOPPIA COPPIA")
-tester("TRIS")
-tester("SCALA")
-tester("COLORE")
-tester("POKER")
-tester("SCALA COLORE")
-tester("SCALA REALE")
-s = time.time()
+#
+#f = time.time()
+#tester("CARTA ALTA")
+#tester("COPPIA")
+#tester("DOPPIA COPPIA")
+#tester("TRIS")
+#tester("SCALA")
+#tester("COLORE")
+#tester("POKER")
+#tester("SCALA COLORE")
+#tester("SCALA REALE")
+#s = time.time()
 print(s-f)
 
 
+gioco()
 
 
 
